@@ -49,13 +49,14 @@
         <textarea id="question-input" rows="3" placeholder="Например, можно ли возместить такси после 22:00" maxlength="4000" disabled required></textarea>
         <button type="submit" class="button button-primary" id="ask-button" disabled>Найти ответ</button>
       </form>
+      <div class="inline-status" id="query-status" role="status" aria-live="polite"></div>
+      <div class="query-progress" id="query-progress" role="progressbar" aria-label="Поиск ответа" hidden></div>
       <div class="suggestions" id="suggestions" hidden>
         <span>Примеры вопросов</span>
         <button type="button" data-question="Можно ли вернуть деньги за такси после рабочей встречи в 23:00?">Такси после встречи</button>
         <button type="button" data-question="Сколько дней есть, чтобы подать чек?">Срок подачи чека</button>
         <button type="button" data-question="Нужно ли согласование для покупки за 12 000 рублей?">Покупка за 12 000 ₽</button>
       </div>
-      <div class="inline-status" id="query-status" role="status" aria-live="polite"></div>
     </section>
 
     <section class="answer-panel" id="answer-panel" aria-live="polite" aria-labelledby="answer-title" hidden>

@@ -3,6 +3,7 @@ const picker = $('document-picker');
 const loaded = $('loaded-document');
 const uploadStatus = $('upload-status');
 const queryStatus = $('query-status');
+const queryProgress = $('query-progress');
 const answerPanel = $('answer-panel');
 const questionInput = $('question-input');
 let currentDocument = '';
@@ -37,6 +38,7 @@ function documentReady(name, isExample) {
   picker.hidden = true;
   $('suggestions').hidden = !isExample;
   answerPanel.hidden = true;
+  queryProgress.hidden = true;
   status(queryStatus, '');
   setBusy(false);
   questionInput.focus();
@@ -102,6 +104,7 @@ async function ask(event) {
   setBusy(true);
   answerPanel.hidden = true;
   status(queryStatus, 'Ищем ответ', 'busy');
+  queryProgress.hidden = false;
   try {
     const response = await fetch('/query', {
       method: 'POST',
@@ -113,6 +116,7 @@ async function ask(event) {
   } catch (error) {
     status(queryStatus, error.message, 'error');
   } finally {
+    queryProgress.hidden = true;
     setBusy(false);
   }
 }
@@ -124,6 +128,7 @@ $('change-document').addEventListener('click', () => {
   loaded.hidden = true;
   picker.hidden = false;
   answerPanel.hidden = true;
+  queryProgress.hidden = true;
   $('suggestions').hidden = true;
   $('file-input').value = '';
   questionInput.value = '';
