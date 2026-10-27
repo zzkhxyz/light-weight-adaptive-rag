@@ -24,8 +24,8 @@ function setBusy(value) {
 async function parseResponse(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401) throw new Error('На сервере включён ключ доступа. Добавьте его в настройках API.');
-    throw new Error(data.detail || 'Не удалось выполнить запрос. Попробуйте ещё раз.');
+    if (response.status === 401) throw new Error('Для доступа к серверу нужен ключ');
+    throw new Error(data.detail || 'Не удалось выполнить запрос, попробуйте ещё раз');
   }
   return data;
 }
@@ -45,7 +45,7 @@ function documentReady(name, isExample) {
 async function useExample() {
   if (busy) return;
   setBusy(true);
-  status(uploadStatus, 'Подготавливаем пример. При первом запуске это может занять минуту…', 'busy');
+  status(uploadStatus, 'Загружаем пример, при первом запуске это может занять минуту', 'busy');
   try {
     const response = await fetch('/example/load', {method: 'POST'});
     const data = await parseResponse(response);
@@ -60,15 +60,15 @@ async function useExample() {
 async function uploadFile(file) {
   if (!file || busy) return;
   if (!/\.(txt|md|pdf|docx)$/i.test(file.name)) {
-    status(uploadStatus, 'Выберите TXT, Markdown, PDF или Word.', 'error');
+    status(uploadStatus, 'Выберите TXT, MD, PDF или DOCX', 'error');
     return;
   }
   if (file.size > 5_000_000) {
-    status(uploadStatus, 'Файл должен быть не больше 5 МБ.', 'error');
+    status(uploadStatus, 'Файл должен быть не больше 5 МБ', 'error');
     return;
   }
   setBusy(true);
-  status(uploadStatus, 'Читаем документ и готовим поиск. При первой загрузке это может занять минуту…', 'busy');
+  status(uploadStatus, 'Загружаем файл, при первом запуске это может занять минуту', 'busy');
   const form = new FormData();
   form.append('file', file);
   try {
@@ -90,9 +90,7 @@ function showAnswer(data) {
     $('source-name').textContent = source.source;
     $('source-text').textContent = source.text;
   }
-  $('answer-note').textContent = source
-    ? 'Ответ проверен по найденному фрагменту документа.'
-    : 'В документе не нашлось подтверждения для точного ответа.';
+  $('answer-note').textContent = '';
   answerPanel.hidden = false;
   answerPanel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
@@ -103,7 +101,7 @@ async function ask(event) {
   if (!question || !currentDocument || busy) return;
   setBusy(true);
   answerPanel.hidden = true;
-  status(queryStatus, 'Ищем подходящий фрагмент и проверяем ответ…', 'busy');
+  status(queryStatus, 'Ищем ответ', 'busy');
   try {
     const response = await fetch('/query', {
       method: 'POST',

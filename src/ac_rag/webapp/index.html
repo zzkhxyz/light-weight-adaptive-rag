@@ -3,92 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f9fc">
-  <title>Ответ из документа</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>Поиск по документу</title>
   <link rel="stylesheet" href="/assets/style.css">
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand" aria-label="Ответ из документа">
-      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-      <span>Ответ из документа</span>
-    </div>
-    <span class="topbar-note">Демонстрация поиска по вашим файлам</span>
-  </header>
-
   <main class="page">
-    <section class="intro" aria-labelledby="page-title">
-      <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Один документ · один понятный ответ</div>
-      <h1 id="page-title">Спросите документ<br><em>своими словами.</em></h1>
-      <p>Загрузите короткую памятку или попробуйте готовый пример. Мы найдём ответ в тексте и покажем, на что он опирается.</p>
-    </section>
+    <header class="intro">
+      <h1>Поиск по документу</h1>
+      <p>Загрузите файл или используйте пример</p>
+    </header>
 
-    <section class="workspace" aria-label="Работа с документом">
-      <div class="step-heading">
-        <span class="step-number">1</span>
-        <div><h2>Добавьте документ</h2><p>Подойдут TXT, Markdown, PDF или Word до 5 МБ</p></div>
-      </div>
-
-      <div class="document-picker" id="document-picker">
-        <div class="example-card">
-          <div class="paper-icon" aria-hidden="true"><span></span><span></span><span></span></div>
+    <section class="section" aria-labelledby="document-title">
+      <h2 id="document-title">Документ</h2>
+      <div id="document-picker">
+        <div class="example-row">
           <div class="example-copy">
-            <strong>Попробовать на примере</strong>
-            <p>Одностраничная памятка о возмещении рабочих расходов</p>
-            <a href="/example/document" download>Смотреть текст памятки <span aria-hidden="true">↗</span></a>
+            <strong>Пример: возмещение расходов</strong>
+            <span>Памятка на одну страницу</span>
           </div>
-          <button type="button" class="button button-primary" id="sample-button">Взять пример</button>
+          <button type="button" class="button button-secondary" id="sample-button">Выбрать пример</button>
         </div>
-        <div class="divider"><span>или</span></div>
+        <a class="download-link" href="/example/document" download>Скачать пример</a>
+        <div class="separator" aria-hidden="true"></div>
         <div class="upload-area" id="drop-zone">
-          <label class="upload-label" for="file-input">Выбрать свой документ</label>
-          <span>Можно перетащить файл сюда</span>
+          <label class="button button-secondary upload-label" for="file-input">Загрузить файл</label>
+          <span>TXT, MD, PDF, DOCX до 5 МБ</span>
           <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" aria-label="Загрузить документ">
         </div>
       </div>
 
       <div class="loaded-document" id="loaded-document" hidden>
-        <span class="loaded-icon" aria-hidden="true">✓</span>
-        <div class="loaded-copy"><span class="loaded-label">Документ готов</span><strong id="document-name"></strong></div>
+        <div class="loaded-copy"><span>Выбран документ</span><strong id="document-name"></strong></div>
         <button type="button" class="text-button" id="change-document">Заменить</button>
       </div>
-
       <div class="inline-status" id="upload-status" role="status" aria-live="polite"></div>
-
-      <div class="step-heading question-step" id="question-step">
-        <span class="step-number">2</span>
-        <div><h2>Задайте вопрос</h2><p>Напишите так, как спросили бы коллегу</p></div>
-      </div>
-
-      <form class="question-form" id="question-form">
-        <label for="question-input" class="sr-only">Вопрос по документу</label>
-        <textarea id="question-input" rows="2" placeholder="Например: можно ли вернуть деньги за такси после встречи в 23:00?" maxlength="4000" disabled required></textarea>
-        <button type="submit" class="button button-primary ask-button" id="ask-button" disabled>Найти ответ <span aria-hidden="true">→</span></button>
-      </form>
-      <div class="suggestions" id="suggestions" hidden>
-        <span>Попробуйте спросить:</span>
-        <button type="button" data-question="Можно ли вернуть деньги за такси после рабочей встречи в 23:00?">Про такси после встречи</button>
-        <button type="button" data-question="Сколько дней есть, чтобы подать чек?">Про срок подачи чека</button>
-        <button type="button" data-question="Нужно ли согласование для покупки за 12 000 рублей?">Про согласование покупки</button>
-      </div>
-      <div class="inline-status" id="query-status" role="status" aria-live="polite"></div>
-
-      <section class="answer-panel" id="answer-panel" aria-live="polite" hidden>
-        <div class="answer-heading"><span class="answer-spark" aria-hidden="true">✳</span><h2>Ответ</h2></div>
-        <p class="answer-text" id="answer-text"></p>
-        <div id="source-block" hidden>
-          <div class="source-title">Откуда этот ответ</div>
-          <div class="source-card">
-            <div class="source-name" id="source-name"></div>
-            <p id="source-text"></p>
-          </div>
-        </div>
-        <p class="answer-note" id="answer-note"></p>
-      </section>
     </section>
 
-    <p class="privacy-note">Документ сохраняется в локальном индексе этого сервера. Для новой проверки его можно заменить другим файлом.</p>
+    <section class="section question-section" aria-labelledby="question-title">
+      <h2 id="question-title">Вопрос</h2>
+      <form class="question-form" id="question-form">
+        <label for="question-input" class="sr-only">Вопрос по документу</label>
+        <textarea id="question-input" rows="3" placeholder="Например, можно ли возместить такси после 22:00" maxlength="4000" disabled required></textarea>
+        <button type="submit" class="button button-primary" id="ask-button" disabled>Найти ответ</button>
+      </form>
+      <div class="suggestions" id="suggestions" hidden>
+        <span>Примеры вопросов</span>
+        <button type="button" data-question="Можно ли вернуть деньги за такси после рабочей встречи в 23:00?">Такси после встречи</button>
+        <button type="button" data-question="Сколько дней есть, чтобы подать чек?">Срок подачи чека</button>
+        <button type="button" data-question="Нужно ли согласование для покупки за 12 000 рублей?">Покупка за 12 000 ₽</button>
+      </div>
+      <div class="inline-status" id="query-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="answer-panel" id="answer-panel" aria-live="polite" aria-labelledby="answer-title" hidden>
+      <h2 id="answer-title">Ответ</h2>
+      <p class="answer-text" id="answer-text"></p>
+      <div id="source-block" hidden>
+        <h3>Источник</h3>
+        <div class="source-name" id="source-name"></div>
+        <p class="source-text" id="source-text"></p>
+      </div>
+      <p class="answer-note" id="answer-note"></p>
+    </section>
+
+    <footer>Текст документа сохраняется на этом сервере</footer>
   </main>
 </body>
 </html>
