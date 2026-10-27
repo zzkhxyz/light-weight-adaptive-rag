@@ -15,8 +15,8 @@ class Hypothesis(BaseModel):
 
 
 class OpenAIBackend:
-    def __init__(self, model: str):
-        self.client = AsyncOpenAI()
+    def __init__(self, model: str, api_key: str | None = None, base_url: str | None = None):
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     async def _parse(self, system: str, user: str, schema: type[BaseModel]):

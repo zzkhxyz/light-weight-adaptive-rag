@@ -27,6 +27,8 @@ flowchart TD
 
 Requires Python 3.11+ and an OpenAI API key. First startup downloads CPU models; subsequent starts use the model cache. The local Qdrant directory holds indexed vectors and payloads. No Docker or GPU is required.
 
+For OpenRouter, set `OPENAI_BASE_URL=https://openrouter.ai/api/v1`, put the `sk-or-...` key in `OPENAI_API_KEY`, and set `AC_RAG_LLM_MODEL` to a provider/model slug such as `openai/gpt-4o-mini`.
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -47,6 +49,8 @@ Or use the REST API:
 Invoke-RestMethod http://127.0.0.1:8000/ingest -Method Post -ContentType application/json -Body '{"source":"memo","text":"The rollout starts in November."}'
 Invoke-RestMethod http://127.0.0.1:8000/query -Method Post -ContentType application/json -Body '{"query":"When does the rollout start?"}'
 ```
+
+For a smoke test, `GET /health` should return `status: ok` and a chunk count. Index a short passage with `/ingest`, then ask a question whose answer appears in that passage using `/query`. Verify that `citations` contains an ID from `chunk_ids`, `sources` contains the same passage, and `reasoning_trace` ends with `guard:pass` or `guard:retry_pass`. Ask an unrelated document question to check that the service abstains when evidence is weak. With a bearer token configured, add `Authorization: Bearer <token>` to ingestion and query requests.
 
 `POST /query/stream` emits SSE `status`, `token`, and `result` events. Tokens are emitted after validation so unsupported text cannot leak before the guard completes. This is incremental answer delivery, not provider token streaming. The `reasoning_trace` field records pipeline events only and does not expose hidden model reasoning.
 

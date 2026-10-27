@@ -22,7 +22,8 @@ def make_engine(settings: Settings | None = None) -> Engine:
     models = CPUModels(settings.embed_en, settings.embed_ru, settings.rerank_model)
     store = HybridStore(settings.qdrant_path, models)
     web = TavilySearch(settings.tavily_api_key) if settings.enable_web and settings.tavily_api_key else None
-    return Engine(store, models, OpenAIBackend(settings.llm_model), settings, web)
+    key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else None
+    return Engine(store, models, OpenAIBackend(settings.llm_model, api_key=key, base_url=settings.openai_base_url or None), settings, web)
 
 
 @asynccontextmanager

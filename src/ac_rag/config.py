@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     rerank_threshold: float = Field(default=0.65, ge=0, le=1)
     llm_model: str = "gpt-4o-mini"
+    openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
+    openai_base_url: str | None = Field(default=None, validation_alias="OPENAI_BASE_URL")
     enable_web: bool = False
     tavily_api_key: str | None = None
     service_api_key: SecretStr | None = None
