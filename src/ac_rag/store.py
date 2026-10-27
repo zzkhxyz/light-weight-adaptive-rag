@@ -98,14 +98,15 @@ class HybridStore:
                 self._rebuild(lang)
         return [row.id for rows in grouped.values() for row in rows]
 
-    async def search(self, query: str, limit: int = 20, vector_query: str | None = None) -> list[Chunk]:
+    async def search(self, query: str, limit: int = 20, vector_query: str | None = None, source: str | None = None) -> list[Chunk]:
         lang = language_of(query)
         async with self._lock:
             if not self._chunks[lang]:
                 return []
             vector = (await self.models.embed([vector_query or query], lang))[0]
             name = f"chunks_{lang}"
-            result = await asyncio.to_thread(self.client.query_points, name, query=vector, limit=limit, with_payload=True)
+            source_filter = models.Filter(must=[models.FieldCondition(key="source", match=models.MatchValue(value=source))]) if source else None
+            result = await asyncio.to_thread(self.client.query_points, name, query=vector, query_filter=source_filter, limit=limit, with_payload=True)
             dense = [Chunk(id=int(r.id), score=float(r.score), **r.payload) for r in result.points]
             bm = self._bm25[lang]
             tokens = tokenize(query)
@@ -113,7 +114,7 @@ class HybridStore:
             if bm and tokens:
                 scores = bm.get_scores(tokens)
                 order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-                sparse = [self._chunks[lang][i].model_copy(update={"score": float(scores[i])}) for i in order[:limit] if scores[i] > 0]
+                sparse = [self._chunks[lang][i].model_copy(update={"score": float(scores[i])}) for i in order if scores[i] > 0 and (source is None or self._chunks[lang][i].source == source)][:limit]
             return rrf([dense, sparse])[:limit]
 
     async def search_dense(self, query: str, limit: int = 5) -> list[Chunk]:

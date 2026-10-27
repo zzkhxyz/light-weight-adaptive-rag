@@ -32,6 +32,8 @@ class RAGResponse(BaseModel):
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
     route: Route | None = None
+    document_only: bool = False
+    source: str | None = Field(default=None, max_length=500)
 
 
 class QueryResult(RAGResponse):

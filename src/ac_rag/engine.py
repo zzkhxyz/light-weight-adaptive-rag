@@ -17,9 +17,11 @@ class Engine:
         self.settings = settings
         self.web = web
 
-    async def query(self, question: str, forced_route: Route | None = None) -> QueryResult:
+    async def query(self, question: str, forced_route: Route | None = None, document_only: bool = False, source: str | None = None) -> QueryResult:
         started = time.perf_counter()
         route = forced_route or route_query(question)
+        if document_only and route == Route.DIRECT:
+            route = Route.STANDARD_RAG
         trace = [f"route:{route.value}"]
         calls = 0
 
@@ -34,15 +36,15 @@ class Engine:
         if route == Route.HYDE:
             hypothesis = await self.llm.hyde(question)
             calls += 1
-            candidates = await self.store.search(question, self.settings.retrieval_limit, vector_query=hypothesis)
+            candidates = await self.store.search(question, self.settings.retrieval_limit, vector_query=hypothesis, source=source)
             trace.append("retrieval:hyde")
         elif route == Route.MULTI_QUERY:
             queries = await self.llm.rewrite(question)
             calls += 1
-            candidates = rrf(await asyncio.gather(*(self.store.search(q, self.settings.retrieval_limit) for q in [question, *queries])))[:self.settings.retrieval_limit]
+            candidates = rrf(await asyncio.gather(*(self.store.search(q, self.settings.retrieval_limit, source=source) for q in [question, *queries])))[:self.settings.retrieval_limit]
             trace.append("retrieval:multi_query")
         else:
-            candidates = await self.store.search(question, self.settings.retrieval_limit)
+            candidates = await self.store.search(question, self.settings.retrieval_limit, source=source)
             trace.append("retrieval:hybrid")
 
         selected = await self._rerank(question, candidates)
@@ -50,7 +52,7 @@ class Engine:
         if not selected or selected[0].score < self.settings.rerank_threshold:
             trace.append("crag:low_confidence")
             for _ in range(self.settings.max_fallbacks):
-                if self.web is not None:
+                if self.web is not None and not document_only:
                     try:
                         extra = await self.web.search(question)
                         trace.append("fallback:web")
@@ -60,7 +62,7 @@ class Engine:
                 else:
                     extra_queries = await self.llm.rewrite(question)
                     calls += 1
-                    searches = await asyncio.gather(*(self.store.search(q, self.settings.retrieval_limit) for q in extra_queries))
+                    searches = await asyncio.gather(*(self.store.search(q, self.settings.retrieval_limit, source=source) for q in extra_queries))
                     extra = rrf(searches)[:self.settings.retrieval_limit]
                     trace.append("fallback:rewrite")
                 selected = await self._rerank(question, rrf([selected, extra])[:self.settings.retrieval_limit])

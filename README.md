@@ -1,4 +1,4 @@
-# Adaptive & Corrective RAG Engine
+# Ответ из документа — Adaptive & Corrective RAG Engine
 
 Typed Python service for CPU retrieval with explicit routing, hybrid search, reranking, corrective fallback, structured generation, and a second faithfulness check. This is an implementation of the attached design, with performance claims left as targets until measured on a real corpus.
 
@@ -23,9 +23,13 @@ flowchart TD
     V2 -->|fail| A[Abstain] --> O
 ```
 
+## Простая демонстрация
+
+После запуска откройте `http://127.0.0.1:8000/`. Нажмите **Взять пример**, выберите вопрос о такси после рабочей встречи и нажмите **Найти ответ**. Под ответом появится выдержка из одностраничной памятки. Вместо примера можно загрузить свой TXT, Markdown, PDF или DOCX до 5 МБ. Вопросы на странице ищут только в выбранном документе; если подтверждения нет, сервис сообщает об этом обычным текстом. Технический API остаётся доступен в `/docs`.
+
 ## Run locally
 
-Requires Python 3.11+ and an OpenAI API key. First startup downloads CPU models; subsequent starts use the model cache. The local Qdrant directory holds indexed vectors and payloads. No Docker or GPU is required.
+Requires Python 3.11+ and an OpenAI-compatible API key. First startup downloads CPU models; subsequent starts use the model cache. The local Qdrant directory holds indexed vectors and payloads. No Docker or GPU is required.
 
 For OpenRouter, set `OPENAI_BASE_URL=https://openrouter.ai/api/v1`, put the `sk-or-...` key in `OPENAI_API_KEY`, and set `AC_RAG_LLM_MODEL` to a provider/model slug such as `openai/gpt-4o-mini`.
 
@@ -62,7 +66,7 @@ For a smoke test, `GET /health` should return `status: ok` and a chunk count. In
 - Reingesting a source replaces its prior chunks. Chunk IDs are stable 63 bit hashes of source and chunk index. Source content is treated as data, never as instructions.
 - CLI ingestion accepts UTF-8 `.txt`/`.md`, text-based `.pdf`, and `.docx`. Scanned PDFs need OCR before ingestion.
 - Web fallback is opt in with `AC_RAG_ENABLE_WEB=true` and `AC_RAG_TAVILY_API_KEY`. Otherwise the fallback reformulates queries once. If evidence stays weak or the guard fails twice, the service abstains.
-- The example binds to localhost. Set `AC_RAG_SERVICE_API_KEY` to require a bearer token on ingestion and queries; put request limits and TLS at the reverse proxy before exposing the API publicly. API keys belong in environment variables, never in Git.
+- The example binds to localhost. Set `AC_RAG_SERVICE_API_KEY` to require a bearer token on ingestion and queries; the simple browser page assumes this token is unset. Put request limits and TLS at the reverse proxy before exposing the API publicly. API keys belong in environment variables, never in Git.
 
 ## Evaluation
 

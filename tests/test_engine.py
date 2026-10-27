@@ -8,7 +8,7 @@ from ac_rag.store import rrf, split_text
 
 
 class FakeStore:
-    async def search(self, query, limit=20, vector_query=None):
+    async def search(self, query, limit=20, vector_query=None, source=None):
         return [Chunk(id=7, text="Paris is the capital of France.", source="guide", language="en")]
 
 
