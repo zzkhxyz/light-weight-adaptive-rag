@@ -37,6 +37,11 @@ class QueryRequest(BaseModel):
     source: str | None = Field(default=None, max_length=500)
 
 
+class SentenceEvidence(BaseModel):
+    sentence: str
+    citations: list[int]
+
+
 class QueryResult(RAGResponse):
     route: Route
     sources: list[Chunk]
@@ -44,6 +49,7 @@ class QueryResult(RAGResponse):
     llm_calls: int
     input_tokens: int | None = None
     output_tokens: int | None = None
+    evidence: list[SentenceEvidence] = Field(default_factory=list)
 
 
 class CompareResult(BaseModel):
@@ -61,6 +67,12 @@ class IngestResult(BaseModel):
     chunk_ids: list[int]
 
 
+class EvidenceChoice(BaseModel):
+    sentence_index: int = Field(ge=0)
+    citations: list[int]
+
+
 class GuardVerdict(BaseModel):
     supported: bool
     unsupported_claims: list[str]
+    evidence: list[EvidenceChoice] = Field(default_factory=list)

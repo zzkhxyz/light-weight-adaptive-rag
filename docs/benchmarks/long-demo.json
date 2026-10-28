@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-28T17:55:12+00:00",
+  "timestamp_utc": "2026-10-28T18:03:45+00:00",
   "model": "openai/gpt-4o-mini",
   "source": "Длинный пример — проект Aurora",
   "cases": [
@@ -15,7 +15,7 @@
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 2065.71,
+        "latency_ms": 1661.5,
         "llm_calls": 1,
         "input_tokens": 1711,
         "output_tokens": 35,
@@ -34,10 +34,10 @@
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 5972.47,
+        "latency_ms": 4808.53,
         "llm_calls": 2,
-        "input_tokens": 3357,
-        "output_tokens": 45,
+        "input_tokens": 3459,
+        "output_tokens": 62,
         "route": "standard_rag",
         "reasoning_trace": [
           "route:standard_rag",
@@ -61,7 +61,7 @@
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 2166.03,
+        "latency_ms": 1598.17,
         "llm_calls": 1,
         "input_tokens": 1718,
         "output_tokens": 31,
@@ -79,10 +79,10 @@
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 4246.63,
+        "latency_ms": 5103.06,
         "llm_calls": 2,
-        "input_tokens": 2745,
-        "output_tokens": 41,
+        "input_tokens": 2847,
+        "output_tokens": 56,
         "route": "standard_rag",
         "reasoning_trace": [
           "route:standard_rag",
@@ -100,16 +100,17 @@
       "expected": "Delta",
       "position": "связь середины и конца",
       "baseline": {
-        "answer": "Группу, которая проверяет резервный канал проекта Aurora, называется Delta.",
+        "answer": "Резервный канал связи проекта Aurora проверяет группа Delta каждую пятницу.",
         "citations": [
-          4181160328808141574
+          4181160328808141574,
+          623432262304954451
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 1157.17,
+        "latency_ms": 1431.29,
         "llm_calls": 1,
         "input_tokens": 1692,
-        "output_tokens": 36,
+        "output_tokens": 39,
         "route": "standard_rag",
         "reasoning_trace": [
           "baseline:dense",
@@ -121,14 +122,14 @@
         "answer": "Резервный канал связи проекта Aurora называется Orion, и его проверяет группа Delta каждую пятницу.",
         "citations": [
           4181160328808141574,
-          1487610940471216140
+          3533480220722163668
         ],
         "expected_found": true,
         "cited": true,
-        "latency_ms": 8479.82,
-        "llm_calls": 4,
-        "input_tokens": 6663,
-        "output_tokens": 122,
+        "latency_ms": 5195.7,
+        "llm_calls": 2,
+        "input_tokens": 3409,
+        "output_tokens": 69,
         "route": "standard_rag",
         "reasoning_trace": [
           "route:standard_rag",
@@ -136,8 +137,7 @@
           "rerank:20",
           "context:rerank_and_retrieval",
           "crag:document_scope",
-          "guard:fail",
-          "guard:retry_pass"
+          "guard:pass"
         ],
         "estimated_cost_usd": null
       }
@@ -152,19 +152,19 @@
       "correct_answers": 3,
       "questions": 3,
       "cited_answers": 3,
-      "mean_latency_ms": 1796.3,
+      "mean_latency_ms": 1563.65,
       "llm_calls": 3,
       "input_tokens": 5121,
-      "output_tokens": 102
+      "output_tokens": 105
     },
     "adaptive": {
       "correct_answers": 3,
       "questions": 3,
       "cited_answers": 3,
-      "mean_latency_ms": 6232.97,
-      "llm_calls": 8,
-      "input_tokens": 12765,
-      "output_tokens": 208
+      "mean_latency_ms": 5035.76,
+      "llm_calls": 6,
+      "input_tokens": 9715,
+      "output_tokens": 187
     }
   }
 }

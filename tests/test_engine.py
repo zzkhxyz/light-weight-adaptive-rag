@@ -2,7 +2,7 @@ import asyncio
 
 from ac_rag.config import Settings
 from ac_rag.engine import Engine
-from ac_rag.models import Chunk, GuardVerdict, RAGResponse, Route
+from ac_rag.models import Chunk, EvidenceChoice, GuardVerdict, RAGResponse, Route
 from ac_rag.router import route_query
 from ac_rag.store import rrf, split_text
 
@@ -133,6 +133,21 @@ def test_guard_receives_only_cited_passages():
         return llm.guarded_ids
 
     assert asyncio.run(run()) == [7]
+
+
+def test_verified_sentence_evidence_is_returned():
+    class EvidenceLLM(FakeLLM):
+        async def guard(self, query, answer, context):
+            return GuardVerdict(supported=True, unsupported_claims=[],
+                                evidence=[EvidenceChoice(sentence_index=0, citations=[7])])
+
+    async def run():
+        engine = Engine(FakeStore(), FakeModels(), EvidenceLLM(), Settings())
+        return await engine.query("Where is Paris?", document_only=True, source="guide")
+
+    result = asyncio.run(run())
+    assert result.evidence[0].sentence == "Paris is the capital of France."
+    assert result.evidence[0].citations == [7]
 
 
 def test_rrf_rewards_overlap():

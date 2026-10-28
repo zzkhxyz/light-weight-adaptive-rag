@@ -120,6 +120,8 @@ function showAnswer(data) {
   comparison.hidden = true;
   $('answer-text').textContent = data.answer;
   const sources = data.sources || [];
+  const sourceById = new Map(sources.map((source) => [source.id, source]));
+  const sourceItemById = new Map();
   $('source-block').hidden = !sources.length;
   const sourceList = $('source-list');
   sourceList.replaceChildren();
@@ -142,7 +144,32 @@ function showAnswer(data) {
       item.append(button);
     }
     sourceList.append(item);
+    sourceItemById.set(source.id, item);
   }
+  const evidenceList = $('evidence-list');
+  evidenceList.replaceChildren();
+  for (const entry of data.evidence || []) {
+    const row = document.createElement('div');
+    row.className = 'evidence-row';
+    const sentence = document.createElement('span');
+    sentence.textContent = entry.sentence;
+    row.append(sentence);
+    for (const id of entry.citations) {
+      const source = sourceById.get(id);
+      if (!source) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'evidence-link';
+      button.textContent = source.page ? `Стр. ${source.page}` : 'Фрагмент';
+      button.addEventListener('click', () => {
+        if (source.page && source.source.toLowerCase().endsWith('.pdf')) openPdfSource(source);
+        else sourceItemById.get(id)?.scrollIntoView({behavior: 'smooth', block: 'center'});
+      });
+      row.append(button);
+    }
+    evidenceList.append(row);
+  }
+  $('evidence-block').hidden = !evidenceList.childElementCount;
   $('answer-note').textContent = '';
   answerPanel.hidden = false;
   answerPanel.scrollIntoView({behavior: 'smooth', block: 'nearest'});

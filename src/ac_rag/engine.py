@@ -4,7 +4,8 @@ import asyncio
 import time
 
 from .config import Settings
-from .models import Chunk, GuardVerdict, QueryResult, Route
+from .llm import answer_sentences
+from .models import Chunk, GuardVerdict, QueryResult, Route, SentenceEvidence
 from .router import asks_for_overview, route_query
 from .store import rrf
 
@@ -127,7 +128,12 @@ class Engine:
         if not verdict.supported or not response.citations:
             text = "Не удалось подтвердить ответ по источникам." if any("а" <= c.lower() <= "я" for c in question) else "The answer could not be verified against the sources."
             return self._result(text, [], 0.0, route, [], trace + ["guard:abstain"], calls, started)
-        return self._result(response.answer, response.citations, response.confidence_score, route, selected, trace, calls, started)
+        sentences = answer_sentences(response.answer)
+        evidence = [SentenceEvidence(sentence=sentences[item.sentence_index],
+                                     citations=[cid for cid in item.citations if cid in response.citations])
+                    for item in verdict.evidence if item.sentence_index < len(sentences)]
+        return self._result(response.answer, response.citations, response.confidence_score,
+                            route, selected, trace, calls, started, evidence=evidence)
 
     async def _rerank(self, question: str, chunks: list[Chunk]) -> list[Chunk]:
         if not chunks:
@@ -140,7 +146,7 @@ class Engine:
         valid = {c.id for c in chunks}
         return response.model_copy(update={"citations": list(dict.fromkeys(c for c in response.citations if c in valid))})
 
-    def _result(self, answer, citations, confidence, route, sources, trace, calls, started) -> QueryResult:
+    def _result(self, answer, citations, confidence, route, sources, trace, calls, started, evidence=None) -> QueryResult:
         cited = set(citations)
         usage = self.llm.usage() if hasattr(self.llm, "usage") else None
         return QueryResult(
@@ -149,4 +155,5 @@ class Engine:
             sources=[c for c in sources if c.id in cited],
             latency_ms=round((time.perf_counter() - started) * 1000, 2), llm_calls=calls,
             input_tokens=usage[0] if usage else None, output_tokens=usage[1] if usage else None,
+            evidence=evidence or [],
         )
