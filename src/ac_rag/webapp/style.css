@@ -18,6 +18,7 @@ h1{font-size:clamp(2rem,4.5vw,2.75rem);font-weight:650;line-height:1.15;letter-s
 .section{margin-bottom:36px}
 h2{font-size:1.25rem;font-weight:650;letter-spacing:-.015em;margin-bottom:18px}
 .example-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0 10px}
+.example-actions{display:flex;gap:8px;flex-wrap:wrap}
 .example-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
 .example-copy strong{font-weight:600}
 .example-copy span,.loaded-copy span,.upload-area span,.suggestions>span{font-size:.875rem;color:var(--secondary)}
@@ -48,6 +49,7 @@ h2{font-size:1.25rem;font-weight:650;letter-spacing:-.015em;margin-bottom:18px}
 @keyframes query-scan{from{transform:translateX(-30px)}to{transform:translateX(0)}}
 .question-section{border-top:1px solid var(--line);padding-top:32px}
 .question-form{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.question-actions{display:flex;gap:10px;flex-wrap:wrap}
 .question-form textarea{width:100%;min-height:112px;max-height:300px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:14px 15px;background:var(--bg);color:var(--text)}
 .question-form textarea::placeholder{color:var(--secondary)}
 .question-form textarea:disabled{background:var(--soft)}
@@ -60,9 +62,32 @@ h2{font-size:1.25rem;font-weight:650;letter-spacing:-.015em;margin-bottom:18px}
 .answer-text{font-size:1.125rem;line-height:1.6;white-space:pre-wrap;margin-bottom:26px}
 .answer-panel h3{font-size:.875rem;font-weight:650;color:var(--secondary);margin-bottom:8px}
 .source-name{font-size:.875rem;font-weight:600;margin-bottom:8px}
+.source-item{margin-bottom:18px}
 .source-text{font-size:.9375rem;line-height:1.65;color:var(--secondary);border-left:2px solid var(--line);padding-left:16px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-bottom:0}
+.source-open{display:block;margin-top:8px}
+.pdf-dialog{width:min(92vw,960px);max-height:90vh;border:1px solid var(--line);border-radius:18px;background:var(--bg);color:var(--text);padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+.pdf-dialog::backdrop{background:rgba(0,0,0,.68)}
+.pdf-dialog-header{display:flex;justify-content:space-between;align-items:center;gap:12px;overflow-wrap:anywhere}
+.pdf-dialog img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
 .answer-note{font-size:.875rem;color:var(--secondary);margin:16px 0 0}
 .answer-note:empty{display:none}
+.comparison{border-top:1px solid var(--line);padding-top:30px;margin-bottom:36px}
+.comparison-note{color:var(--secondary);font-size:.875rem;max-width:58ch}
+.comparison-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.comparison-card{min-width:0;border:1px solid var(--line);border-radius:16px;padding:18px;background:var(--soft)}
+.comparison-card-adaptive{border-color:var(--blue);background:var(--bg)}
+.comparison-card h3{font-size:1rem;margin-bottom:14px}
+.comparison-answer{white-space:pre-wrap;overflow-wrap:anywhere;min-height:90px}
+.comparison-metrics{border-top:1px solid var(--line);padding-top:12px;font-size:.8125rem;color:var(--secondary)}
+.comparison-source{font-size:.8125rem;color:var(--secondary);margin-top:12px;max-height:120px;overflow:auto;overflow-wrap:anywhere}
 footer{border-top:1px solid var(--line);padding-top:20px;color:var(--secondary);font-size:.8125rem}
+footer a{color:var(--blue)}
+.lab-intro{margin-top:20px}
+.lab-slider-label{display:block;font-weight:600;margin-bottom:10px}
+.lab-slider{width:100%;accent-color:#37c977;cursor:pointer}
+.lab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.lab-method{border-top:1px solid var(--line);padding-top:26px;color:var(--secondary)}
+@media(max-width:700px){.lab-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.page{width:min(100% - 32px,680px);padding-top:36px}.intro{margin-bottom:36px}.example-row{align-items:flex-start;flex-direction:column;gap:12px}.upload-area{align-items:flex-start;flex-direction:column;gap:10px}.button{max-width:100%;white-space:normal;text-align:center}}
+@media(max-width:620px){.comparison-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

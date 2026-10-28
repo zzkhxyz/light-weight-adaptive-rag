@@ -24,7 +24,10 @@
             <strong>Пример: возмещение расходов</strong>
             <span>Памятка на одну страницу</span>
           </div>
-          <button type="button" class="button button-secondary" id="sample-button">Выбрать пример</button>
+          <div class="example-actions">
+            <button type="button" class="button button-secondary" id="sample-button">Выбрать пример</button>
+            <button type="button" class="button button-secondary" id="long-sample-button">Длинный пример</button>
+          </div>
         </div>
         <a class="download-link" href="/example/document" download>Скачать пример</a>
         <div class="separator" aria-hidden="true"></div>
@@ -48,7 +51,10 @@
       <form class="question-form" id="question-form">
         <label for="question-input" class="sr-only">Вопрос по документу</label>
         <textarea id="question-input" rows="3" placeholder="Например, можно ли возместить такси после 22:00" maxlength="4000" disabled required></textarea>
-        <button type="submit" class="button button-primary" id="ask-button" disabled>Найти ответ</button>
+        <div class="question-actions">
+          <button type="submit" class="button button-primary" id="ask-button" disabled>Найти ответ</button>
+          <button type="button" class="button button-secondary" id="compare-button" disabled>Сравнить методы</button>
+        </div>
       </form>
       <div class="inline-status" id="query-status" role="status" aria-live="polite"></div>
       <div class="query-progress" id="query-progress" role="progressbar" aria-label="Поиск ответа" hidden></div>
@@ -58,6 +64,12 @@
         <button type="button" data-question="Сколько дней есть, чтобы подать чек?">Срок подачи чека</button>
         <button type="button" data-question="Нужно ли согласование для покупки за 12 000 рублей?">Покупка за 12 000 ₽</button>
       </div>
+      <div class="suggestions" id="long-suggestions" hidden>
+        <span>Вопросы для длинного примера</span>
+        <button type="button" data-question="Когда запускается проект Aurora?">Факт в начале</button>
+        <button type="button" data-question="Как называется резервный канал проекта Aurora?">Факт в середине</button>
+        <button type="button" data-question="Какая группа проверяет резервный канал проекта Aurora?">Связь двух разделов</button>
+      </div>
     </section>
 
     <section class="answer-panel" id="answer-panel" aria-live="polite" aria-labelledby="answer-title" hidden>
@@ -65,13 +77,28 @@
       <p class="answer-text" id="answer-text"></p>
       <div id="source-block" hidden>
         <h3>Источник</h3>
-        <div class="source-name" id="source-name"></div>
-        <p class="source-text" id="source-text"></p>
+        <div id="source-list"></div>
       </div>
       <p class="answer-note" id="answer-note"></p>
     </section>
 
-    <footer>Текст документа сохраняется на этом сервере</footer>
+    <section class="comparison" id="comparison" aria-live="polite" hidden>
+      <h2>Сравнение на одном вопросе</h2>
+      <p class="comparison-note">Обычный: поиск по эмбеддингам и один ответ. Адаптивный: выбор стратегии поиска и проверка ответа. Оба используют одну модель и документ.</p>
+      <div class="comparison-grid">
+        <article class="comparison-card" id="baseline-card"><h3>Обычный RAG</h3><p class="comparison-answer" id="baseline-answer"></p><div class="comparison-metrics" id="baseline-metrics"></div><div class="comparison-source" id="baseline-source"></div></article>
+        <article class="comparison-card comparison-card-adaptive" id="adaptive-card"><h3>Adaptive RAG</h3><p class="comparison-answer" id="adaptive-answer"></p><div class="comparison-metrics" id="adaptive-metrics"></div><div class="comparison-source" id="adaptive-source"></div></article>
+      </div>
+    </section>
+
+    <dialog class="pdf-dialog" id="pdf-dialog" aria-label="Страница источника">
+      <div class="pdf-dialog-header"><strong id="pdf-title"></strong><button type="button" class="text-button" id="pdf-close">Закрыть</button></div>
+      <p class="comparison-note" id="pdf-status"></p>
+      <img id="pdf-preview" alt="Страница PDF с выделенным фрагментом" hidden>
+      <a id="pdf-original" class="download-link" target="_blank" rel="noopener">Открыть оригинальный PDF</a>
+    </dialog>
+
+    <footer>Документ и его текст сохраняются на этом сервере · <a href="/lab">Эксперимент с памятью Mamba</a></footer>
   </main>
 </body>
 </html>

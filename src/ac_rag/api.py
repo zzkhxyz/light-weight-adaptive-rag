@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import Settings
 from .embedding import CPUModels
 from .engine import Engine
+from .examples.long_report import SOURCE as LONG_SOURCE, build_long_report
 from .llm import OpenAIBackend
-from .loaders import extract_document
-from .models import IngestRequest, IngestResult, QueryRequest, QueryResult
+from .loaders import extract_document, extract_pdf_pages, render_highlighted_page
+from .models import CompareResult, IngestRequest, IngestResult, QueryRequest, QueryResult
 from .store import HybridStore
 from .web import TavilySearch
 
@@ -42,6 +44,11 @@ EXAMPLE_PATH = PACKAGE_DIR / "examples" / "expense-policy.txt"
 app.mount("/assets", StaticFiles(directory=PACKAGE_DIR / "webapp"), name="assets")
 
 
+def stored_pdf_path(settings: Settings, source: str) -> Path:
+    digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
+    return settings.qdrant_path.parent / "uploads" / f"{digest}.pdf"
+
+
 def authorize(request: Request) -> None:
     configured = request.app.state.engine.settings.service_api_key
     if configured is None or not configured.get_secret_value():
@@ -54,12 +61,18 @@ def authorize(request: Request) -> None:
 
 @app.get("/health")
 async def health(request: Request):
-    return {"status": "ok", "chunks": request.app.state.engine.store.count()}
+    engine = request.app.state.engine
+    return {"status": "ok", "chunks": engine.store.count(), "model": engine.settings.llm_model}
 
 
 @app.get("/", include_in_schema=False)
 async def home():
     return FileResponse(PACKAGE_DIR / "webapp" / "index.html")
+
+
+@app.get("/lab", include_in_schema=False)
+async def lab():
+    return FileResponse(PACKAGE_DIR / "webapp" / "lab.html")
 
 
 @app.get("/example/document", include_in_schema=False)
@@ -81,6 +94,16 @@ async def load_example(request: Request):
     return IngestResult(source="Пример — возмещение расходов", chunk_ids=ids)
 
 
+@app.post("/example/long/load", response_model=IngestResult)
+async def load_long_example(request: Request):
+    authorize(request)
+    try:
+        ids = await request.app.state.engine.store.ingest(LONG_SOURCE, build_long_report())
+    except Exception as exc:
+        raise HTTPException(503, detail=f"Long example ingestion failed: {type(exc).__name__}") from exc
+    return IngestResult(source=LONG_SOURCE, chunk_ids=ids)
+
+
 @app.post("/upload", response_model=IngestResult)
 async def upload(request: Request, file: UploadFile = File(...)):
     authorize(request)
@@ -92,15 +115,43 @@ async def upload(request: Request, file: UploadFile = File(...)):
         raise HTTPException(413, detail="Размер файла не должен превышать 5 МБ")
     try:
         text = extract_document(name, content)
+        pages = extract_pdf_pages(content) if name.lower().endswith(".pdf") else None
     except (ValueError, UnicodeDecodeError) as exc:
         raise HTTPException(400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(400, detail=f"Не удалось прочитать документ: {type(exc).__name__}") from exc
     try:
-        ids = await request.app.state.engine.store.ingest(name, text)
+        ids = await request.app.state.engine.store.ingest(name, text, pages=pages)
+        if pages is not None:
+            path = stored_pdf_path(request.app.state.engine.settings, name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_suffix(".tmp")
+            temporary.write_bytes(content)
+            temporary.replace(path)
     except Exception as exc:
         raise HTTPException(503, detail=f"Document indexing failed: {type(exc).__name__}") from exc
     return IngestResult(source=name, chunk_ids=ids)
+
+
+@app.get("/source-pdf")
+async def source_pdf(source: str, request: Request):
+    authorize(request)
+    path = stored_pdf_path(request.app.state.engine.settings, source)
+    if not path.is_file():
+        raise HTTPException(404, detail="Исходный PDF не найден. Загрузите документ снова")
+    return FileResponse(path, media_type="application/pdf", content_disposition_type="inline")
+
+
+@app.get("/source-preview")
+async def source_preview(source: str, chunk_id: int, request: Request):
+    authorize(request)
+    engine = request.app.state.engine
+    chunk = await engine.store.get_chunk(source, chunk_id)
+    path = stored_pdf_path(engine.settings, source)
+    if chunk is None or chunk.page is None or not path.is_file():
+        raise HTTPException(404, detail="Страница PDF не найдена. Загрузите документ снова")
+    image, highlighted = await asyncio.to_thread(render_highlighted_page, path.read_bytes(), chunk.page, chunk.text)
+    return Response(image, media_type="image/png", headers={"X-Highlighted": str(highlighted).lower(), "Cache-Control": "no-store"})
 
 
 @app.post("/ingest", response_model=IngestResult)
@@ -120,6 +171,20 @@ async def query(body: QueryRequest, request: Request):
         return await request.app.state.engine.query(body.query, body.route, body.document_only, body.source)
     except Exception as exc:
         raise HTTPException(503, detail=f"Query failed: {type(exc).__name__}") from exc
+
+
+@app.post("/compare", response_model=CompareResult)
+async def compare(body: QueryRequest, request: Request):
+    authorize(request)
+    if not body.source:
+        raise HTTPException(400, detail="Выберите документ для сравнения")
+    try:
+        engine = request.app.state.engine
+        baseline = await engine.baseline_query(body.query, body.source)
+        adaptive = await engine.query(body.query, document_only=True, source=body.source)
+        return CompareResult(baseline=baseline, adaptive=adaptive)
+    except Exception as exc:
+        raise HTTPException(503, detail=f"Comparison failed: {type(exc).__name__}") from exc
 
 
 def sse(event: str, value: object) -> str:

@@ -69,12 +69,13 @@ class HybridStore:
         rows = self._chunks[lang]
         self._bm25[lang] = BM25Okapi([tokenize(row.text) or [""] for row in rows]) if rows else None
 
-    async def ingest(self, source: str, text: str) -> list[int]:
-        segments = split_text(text)
+    async def ingest(self, source: str, text: str, pages: list[str] | None = None) -> list[int]:
+        segments = ([(segment, page_number) for page_number, page_text in enumerate(pages, 1) for segment in split_text(page_text)]
+                    if pages is not None else [(segment, None) for segment in split_text(text)])
         grouped: dict[str, list[Chunk]] = defaultdict(list)
-        for i, segment in enumerate(segments):
+        for i, (segment, page_number) in enumerate(segments):
             lang = language_of(segment)
-            grouped[lang].append(Chunk(id=point_id(source, i), text=segment, source=source, language=lang))
+            grouped[lang].append(Chunk(id=point_id(source, i), text=segment, source=source, language=lang, page=page_number))
         vectors_by_language = {
             lang: await self.models.embed([row.text for row in rows], lang)
             for lang, rows in grouped.items()
@@ -133,17 +134,26 @@ class HybridStore:
                 total += len(row.text)
             return chosen
 
-    async def search_dense(self, query: str, limit: int = 5) -> list[Chunk]:
-        lang = language_of(query)
+    async def search_dense(self, query: str, limit: int = 5, source: str | None = None) -> list[Chunk]:
+        query_lang = language_of(query)
         async with self._lock:
-            if not self._chunks[lang]:
-                return []
-            vector = (await self.models.embed([query], lang))[0]
-            result = await asyncio.to_thread(self.client.query_points, f"chunks_{lang}", query=vector, limit=limit, with_payload=True)
-            return [Chunk(id=int(r.id), score=float(r.score), **r.payload) for r in result.points]
+            languages = [query_lang] if source is None else [lang for lang in (query_lang, "ru" if query_lang == "en" else "en") if any(row.source == source for row in self._chunks[lang])]
+            found = []
+            for lang in languages:
+                if not self._chunks[lang]:
+                    continue
+                vector = (await self.models.embed([query], lang))[0]
+                source_filter = models.Filter(must=[models.FieldCondition(key="source", match=models.MatchValue(value=source))]) if source else None
+                result = await asyncio.to_thread(self.client.query_points, f"chunks_{lang}", query=vector, query_filter=source_filter, limit=limit, with_payload=True)
+                found.extend(Chunk(id=int(r.id), score=float(r.score), **r.payload) for r in result.points)
+            return sorted(found, key=lambda row: row.score, reverse=True)[:limit]
 
     def count(self) -> int:
         return sum(len(rows) for rows in self._chunks.values())
+
+    async def get_chunk(self, source: str, chunk_id: int) -> Chunk | None:
+        async with self._lock:
+            return next((row for rows in self._chunks.values() for row in rows if row.source == source and row.id == chunk_id), None)
 
     def close(self) -> None:
         self.client.close()

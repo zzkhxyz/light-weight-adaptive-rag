@@ -1,0 +1,79 @@
+{
+  "model": "state-spaces/mamba-130m-hf",
+  "method": "zero-shot cached continuation",
+  "note": "This tests recall from a pretrained recurrent cache, not trained QA or verified citations.",
+  "cases": [
+    {
+      "tokens": 81,
+      "position": "start",
+      "state_bytes": 2949120,
+      "latency_ms": 1354.23,
+      "answer": "The access code for the Aurora",
+      "recalled": false
+    },
+    {
+      "tokens": 81,
+      "position": "middle",
+      "state_bytes": 2949120,
+      "latency_ms": 1293.76,
+      "answer": "ZEBRA\n\nA",
+      "recalled": true
+    },
+    {
+      "tokens": 81,
+      "position": "end",
+      "state_bytes": 2949120,
+      "latency_ms": 1000.95,
+      "answer": "ZEBRA\n\nA",
+      "recalled": true
+    },
+    {
+      "tokens": 237,
+      "position": "start",
+      "state_bytes": 2949120,
+      "latency_ms": 2370.59,
+      "answer": "Access code is the access key",
+      "recalled": false
+    },
+    {
+      "tokens": 237,
+      "position": "middle",
+      "state_bytes": 2949120,
+      "latency_ms": 2554.54,
+      "answer": "Access code is the archive identifier",
+      "recalled": false
+    },
+    {
+      "tokens": 237,
+      "position": "end",
+      "state_bytes": 2949120,
+      "latency_ms": 2235.93,
+      "answer": "ZEBRA\n\nA",
+      "recalled": true
+    },
+    {
+      "tokens": 445,
+      "position": "start",
+      "state_bytes": 2949120,
+      "latency_ms": 3922.58,
+      "answer": "Access code is the archive's",
+      "recalled": false
+    },
+    {
+      "tokens": 445,
+      "position": "middle",
+      "state_bytes": 2949120,
+      "latency_ms": 4014.19,
+      "answer": "Access code is the archive's",
+      "recalled": false
+    },
+    {
+      "tokens": 445,
+      "position": "end",
+      "state_bytes": 2949120,
+      "latency_ms": 3994.19,
+      "answer": "ZEBRA\n\nA",
+      "recalled": true
+    }
+  ]
+}

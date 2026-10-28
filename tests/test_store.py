@@ -39,6 +39,20 @@ def test_source_search_works_when_question_language_differs(tmp_path):
             await store.ingest("english-report", "This report describes KPI monitoring and support programs.")
             matches = await store.search("О чем документ?", source="english-report")
             assert [row.source for row in matches] == ["english-report"]
+            dense = await store.search_dense("О чем документ?", source="english-report")
+            assert [row.source for row in dense] == ["english-report"]
+        finally:
+            store.close()
+    asyncio.run(run())
+
+
+def test_pdf_chunks_keep_page_number(tmp_path):
+    async def run():
+        store = HybridStore(tmp_path / "qdrant", FakeVectors())
+        try:
+            ids = await store.ingest("report.pdf", "First page. Second page.", pages=["First page.", "Second page."])
+            assert (await store.get_chunk("report.pdf", ids[0])).page == 1
+            assert (await store.get_chunk("report.pdf", ids[1])).page == 2
         finally:
             store.close()
     asyncio.run(run())

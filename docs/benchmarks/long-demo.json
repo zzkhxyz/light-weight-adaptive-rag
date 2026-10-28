@@ -1,0 +1,170 @@
+{
+  "timestamp_utc": "2026-10-28T17:55:12+00:00",
+  "model": "openai/gpt-4o-mini",
+  "source": "Длинный пример — проект Aurora",
+  "cases": [
+    {
+      "question": "Когда запускается проект Aurora?",
+      "expected": "14 ноября 2026",
+      "position": "начало",
+      "baseline": {
+        "answer": "Проект Aurora запускается 14 ноября 2026 года.",
+        "citations": [
+          3656824405560184199,
+          6627391352977023469
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 2065.71,
+        "llm_calls": 1,
+        "input_tokens": 1711,
+        "output_tokens": 35,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "baseline:dense",
+          "baseline:unverified"
+        ],
+        "estimated_cost_usd": null
+      },
+      "adaptive": {
+        "answer": "Проект Aurora запускается 14 ноября 2026 года.",
+        "citations": [
+          3656824405560184199,
+          6627391352977023469
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 5972.47,
+        "llm_calls": 2,
+        "input_tokens": 3357,
+        "output_tokens": 45,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "route:standard_rag",
+          "retrieval:hybrid",
+          "rerank:20",
+          "context:rerank_and_retrieval",
+          "crag:document_scope",
+          "guard:pass"
+        ],
+        "estimated_cost_usd": null
+      }
+    },
+    {
+      "question": "Как называется резервный канал проекта Aurora?",
+      "expected": "Orion",
+      "position": "середина",
+      "baseline": {
+        "answer": "Резервный канал связи проекта Aurora называется Orion.",
+        "citations": [
+          1487610940471216140
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 2166.03,
+        "llm_calls": 1,
+        "input_tokens": 1718,
+        "output_tokens": 31,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "baseline:dense",
+          "baseline:unverified"
+        ],
+        "estimated_cost_usd": null
+      },
+      "adaptive": {
+        "answer": "Резервный канал связи проекта Aurora называется Orion.",
+        "citations": [
+          1487610940471216140
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 4246.63,
+        "llm_calls": 2,
+        "input_tokens": 2745,
+        "output_tokens": 41,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "route:standard_rag",
+          "retrieval:hybrid",
+          "rerank:20",
+          "context:rerank_and_retrieval",
+          "crag:document_scope",
+          "guard:pass"
+        ],
+        "estimated_cost_usd": null
+      }
+    },
+    {
+      "question": "Какая группа проверяет резервный канал проекта Aurora?",
+      "expected": "Delta",
+      "position": "связь середины и конца",
+      "baseline": {
+        "answer": "Группу, которая проверяет резервный канал проекта Aurora, называется Delta.",
+        "citations": [
+          4181160328808141574
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 1157.17,
+        "llm_calls": 1,
+        "input_tokens": 1692,
+        "output_tokens": 36,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "baseline:dense",
+          "baseline:unverified"
+        ],
+        "estimated_cost_usd": null
+      },
+      "adaptive": {
+        "answer": "Резервный канал связи проекта Aurora называется Orion, и его проверяет группа Delta каждую пятницу.",
+        "citations": [
+          4181160328808141574,
+          1487610940471216140
+        ],
+        "expected_found": true,
+        "cited": true,
+        "latency_ms": 8479.82,
+        "llm_calls": 4,
+        "input_tokens": 6663,
+        "output_tokens": 122,
+        "route": "standard_rag",
+        "reasoning_trace": [
+          "route:standard_rag",
+          "retrieval:hybrid",
+          "rerank:20",
+          "context:rerank_and_retrieval",
+          "crag:document_scope",
+          "guard:fail",
+          "guard:retry_pass"
+        ],
+        "estimated_cost_usd": null
+      }
+    }
+  ],
+  "prices_usd_per_million": {
+    "input": null,
+    "output": null
+  },
+  "summary": {
+    "baseline": {
+      "correct_answers": 3,
+      "questions": 3,
+      "cited_answers": 3,
+      "mean_latency_ms": 1796.3,
+      "llm_calls": 3,
+      "input_tokens": 5121,
+      "output_tokens": 102
+    },
+    "adaptive": {
+      "correct_answers": 3,
+      "questions": 3,
+      "cited_answers": 3,
+      "mean_latency_ms": 6232.97,
+      "llm_calls": 8,
+      "input_tokens": 12765,
+      "output_tokens": 208
+    }
+  }
+}

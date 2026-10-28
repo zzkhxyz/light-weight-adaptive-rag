@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Память Mamba — эксперимент</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/lab.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <a class="download-link" href="/">← Поиск по документу</a>
+    <header class="intro lab-intro"><h1>Память Mamba</h1><p>Проверка одного факта в рекуррентном состоянии локальной модели</p></header>
+    <section class="section">
+      <h2>Длина входа</h2>
+      <label class="lab-slider-label" for="length-slider"><span id="length-label">Загрузка данных</span></label>
+      <input id="length-slider" class="lab-slider" type="range" min="0" max="0" value="0" disabled>
+      <p class="comparison-note">Факт размещён в начале, середине или конце текста. Модель продолжает текст после вопроса; ответ считается найденным, если содержит точное слово ZEBRA.</p>
+    </section>
+    <section class="section" aria-live="polite">
+      <div class="comparison-grid lab-grid" id="lab-results"></div>
+      <p class="inline-status" id="lab-status"></p>
+    </section>
+    <section class="section lab-method">
+      <h2>Что измерено</h2>
+      <p>Объём состояния включает рекуррентный cache всех слоёв модели. Время измерено на локальном CPU и включает обработку текста и генерацию короткого ответа. Предобученная Mamba-130M здесь не обучалась отвечать по документам.</p>
+      <p>Успех на одном факте не доказывает сохранение всех деталей документа. Для применения в RAG потребуется обучить извлечение фактов, добавить проверку ответа и ссылки на исходный текст.</p>
+      <a class="download-link" href="/assets/ssm-report.json">Исходные результаты JSON</a>
+    </section>
+  </main>
+</body>
+</html>

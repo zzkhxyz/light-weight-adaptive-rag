@@ -19,6 +19,7 @@ class Chunk(BaseModel):
     source: str
     language: Literal["en", "ru"]
     score: float = 0.0
+    page: int | None = None
 
 
 class RAGResponse(BaseModel):
@@ -41,6 +42,13 @@ class QueryResult(RAGResponse):
     sources: list[Chunk]
     latency_ms: float
     llm_calls: int
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
+class CompareResult(BaseModel):
+    baseline: QueryResult
+    adaptive: QueryResult
 
 
 class IngestRequest(BaseModel):

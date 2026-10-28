@@ -14,6 +14,9 @@ class FakeStore:
     async def source_chunks(self, source):
         return [Chunk(id=7, text="Paris is the capital of France.", source=source, language="en")]
 
+    async def search_dense(self, query, limit=5, source=None):
+        return [Chunk(id=7, text="Paris is the capital of France.", source=source, language="en")]
+
 
 class FakeModels:
     async def rerank(self, query, texts):
@@ -76,6 +79,60 @@ def test_document_overview_uses_source_without_reranking():
     result = asyncio.run(run())
     assert result.citations == [7]
     assert "retrieval:document_overview" in result.reasoning_trace
+
+
+def test_baseline_uses_one_generation_without_guard():
+    async def run():
+        engine = Engine(FakeStore(), FakeModels(), FakeLLM(supported=False), Settings())
+        return await engine.baseline_query("What is the capital?", "guide")
+    result = asyncio.run(run())
+    assert result.llm_calls == 1
+    assert result.citations == [7]
+    assert "baseline:unverified" in result.reasoning_trace
+
+
+def test_selected_document_keeps_retrieval_leader_after_reranking():
+    class TwoChunks(FakeStore):
+        async def search(self, query, limit=20, vector_query=None, source=None):
+            return [Chunk(id=7, text="Orion is the backup channel.", source="guide", language="en"),
+                    Chunk(id=8, text="The Delta group checks Orion.", source="guide", language="en")]
+
+    class ReverseScores:
+        async def rerank(self, query, texts):
+            return [0.1, 0.9]
+
+    class RecordingLLM(FakeLLM):
+        async def answer(self, query, context, direct=False, strict=False):
+            self.seen = [chunk.id for chunk in context]
+            return await super().answer(query, context, direct, strict)
+
+    async def run():
+        llm = RecordingLLM()
+        engine = Engine(TwoChunks(), ReverseScores(), llm, Settings(final_limit=1))
+        await engine.query("Who checks the backup channel?", document_only=True, source="guide")
+        return llm.seen
+
+    assert asyncio.run(run()) == [8, 7]
+
+
+def test_guard_receives_only_cited_passages():
+    class TwoChunks(FakeStore):
+        async def search(self, query, limit=20, vector_query=None, source=None):
+            return [Chunk(id=7, text="Paris is in France.", source="guide", language="en"),
+                    Chunk(id=8, text="Berlin is in Germany.", source="guide", language="en")]
+
+    class RecordingLLM(FakeLLM):
+        async def guard(self, query, answer, context):
+            self.guarded_ids = [chunk.id for chunk in context]
+            return await super().guard(query, answer, context)
+
+    async def run():
+        llm = RecordingLLM()
+        engine = Engine(TwoChunks(), FakeModels(), llm, Settings())
+        await engine.query("Where is Paris?", document_only=True, source="guide")
+        return llm.guarded_ids
+
+    assert asyncio.run(run()) == [7]
 
 
 def test_rrf_rewards_overlap():

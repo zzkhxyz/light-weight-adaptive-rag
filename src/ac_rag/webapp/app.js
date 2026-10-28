@@ -6,9 +6,12 @@ const uploadProgress = $('upload-progress');
 const queryStatus = $('query-status');
 const queryProgress = $('query-progress');
 const answerPanel = $('answer-panel');
+const comparison = $('comparison');
 const questionInput = $('question-input');
+const pdfDialog = $('pdf-dialog');
 let currentDocument = '';
 let busy = false;
+let previewUrl = '';
 
 function status(element, message, kind = '') {
   element.textContent = message;
@@ -18,8 +21,10 @@ function status(element, message, kind = '') {
 function setBusy(value) {
   busy = value;
   $('sample-button').disabled = value;
+  $('long-sample-button').disabled = value;
   $('file-input').disabled = value;
   $('ask-button').disabled = value || !currentDocument;
+  $('compare-button').disabled = value || !currentDocument;
   questionInput.disabled = value || !currentDocument;
 }
 
@@ -32,13 +37,15 @@ async function parseResponse(response) {
   return data;
 }
 
-function documentReady(name, isExample) {
+function documentReady(name, exampleKind = '') {
   currentDocument = name;
   $('document-name').textContent = name;
   loaded.hidden = false;
   picker.hidden = true;
-  $('suggestions').hidden = !isExample;
+  $('suggestions').hidden = exampleKind !== 'short';
+  $('long-suggestions').hidden = exampleKind !== 'long';
   answerPanel.hidden = true;
+  comparison.hidden = true;
   queryProgress.hidden = true;
   status(queryStatus, '');
   setBusy(false);
@@ -53,7 +60,25 @@ async function useExample() {
   try {
     const response = await fetch('/example/load', {method: 'POST'});
     const data = await parseResponse(response);
-    documentReady(data.source, true);
+    documentReady(data.source, 'short');
+    status(uploadStatus, '');
+  } catch (error) {
+    status(uploadStatus, error.message, 'error');
+    setBusy(false);
+  } finally {
+    uploadProgress.hidden = true;
+  }
+}
+
+async function useLongExample() {
+  if (busy) return;
+  setBusy(true);
+  status(uploadStatus, 'Индексируем длинный пример, это может занять несколько минут', 'busy');
+  uploadProgress.hidden = false;
+  try {
+    const response = await fetch('/example/long/load', {method: 'POST'});
+    const data = await parseResponse(response);
+    documentReady(data.source, 'long');
     status(uploadStatus, '');
   } catch (error) {
     status(uploadStatus, error.message, 'error');
@@ -81,7 +106,7 @@ async function uploadFile(file) {
   try {
     const response = await fetch('/upload', {method: 'POST', body: form});
     const data = await parseResponse(response);
-    documentReady(data.source, false);
+    documentReady(data.source);
     status(uploadStatus, '');
   } catch (error) {
     status(uploadStatus, error.message, 'error');
@@ -92,17 +117,88 @@ async function uploadFile(file) {
 }
 
 function showAnswer(data) {
+  comparison.hidden = true;
   $('answer-text').textContent = data.answer;
-  const source = data.sources?.[0];
-  $('source-block').hidden = !source;
-  if (source) {
-    $('source-name').textContent = source.source;
-    $('source-text').textContent = source.text;
+  const sources = data.sources || [];
+  $('source-block').hidden = !sources.length;
+  const sourceList = $('source-list');
+  sourceList.replaceChildren();
+  for (const source of sources) {
+    const item = document.createElement('div');
+    item.className = 'source-item';
+    const name = document.createElement('div');
+    name.className = 'source-name';
+    name.textContent = source.page ? `${source.source} · стр. ${source.page}` : source.source;
+    const text = document.createElement('p');
+    text.className = 'source-text';
+    text.textContent = source.text;
+    item.append(name, text);
+    if (source.page && source.source.toLowerCase().endsWith('.pdf')) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'text-button source-open';
+      button.textContent = `Открыть страницу ${source.page}`;
+      button.addEventListener('click', () => openPdfSource(source));
+      item.append(button);
+    }
+    sourceList.append(item);
   }
   $('answer-note').textContent = '';
   answerPanel.hidden = false;
   answerPanel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
+
+function showComparison(data) {
+  answerPanel.hidden = true;
+  for (const kind of ['baseline', 'adaptive']) {
+    const result = data[kind];
+    $(`${kind}-answer`).textContent = result.answer;
+    const tokens = result.input_tokens == null ? '' : ` · ${result.input_tokens + result.output_tokens} токенов`;
+    $(`${kind}-metrics`).textContent = `${(result.latency_ms / 1000).toFixed(1)} с · ${result.llm_calls} вызовов модели · ${result.citations.length} источников${tokens}`;
+    const source = result.sources?.[0];
+    const sourceElement = $(`${kind}-source`);
+    sourceElement.textContent = source ? `Источник: ${source.source} — ${source.text}` : 'Подтверждающий фрагмент не указан';
+    if (source?.page && source.source.toLowerCase().endsWith('.pdf')) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'text-button source-open';
+      button.textContent = `Открыть страницу ${source.page}`;
+      button.addEventListener('click', () => openPdfSource(source));
+      sourceElement.append(button);
+    }
+  }
+  comparison.hidden = false;
+  comparison.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+async function openPdfSource(source) {
+  $('pdf-title').textContent = `${source.source} · стр. ${source.page}`;
+  $('pdf-status').textContent = 'Открываем страницу';
+  $('pdf-preview').hidden = true;
+  $('pdf-original').href = `/source-pdf?source=${encodeURIComponent(source.source)}#page=${source.page}`;
+  pdfDialog.showModal();
+  try {
+    const url = `/source-preview?source=${encodeURIComponent(source.source)}&chunk_id=${source.id}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Не удалось открыть страницу. Загрузите PDF снова');
+    const blob = await response.blob();
+    if (!pdfDialog.open) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(blob);
+    $('pdf-preview').src = previewUrl;
+    $('pdf-preview').hidden = false;
+    $('pdf-status').textContent = response.headers.get('X-Highlighted') === 'true' ? 'Фрагмент источника выделен зелёным' : 'Страница найдена, но фрагмент не удалось выделить точно';
+  } catch (error) {
+    $('pdf-status').textContent = error.message;
+  }
+}
+
+$('pdf-close').addEventListener('click', () => pdfDialog.close());
+pdfDialog.addEventListener('close', () => {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = '';
+  $('pdf-preview').removeAttribute('src');
+});
 
 async function ask(event) {
   event.preventDefault();
@@ -128,22 +224,50 @@ async function ask(event) {
   }
 }
 
+async function compareMethods() {
+  const question = questionInput.value.trim();
+  if (!question || !currentDocument || busy) return;
+  setBusy(true);
+  answerPanel.hidden = true;
+  comparison.hidden = true;
+  status(queryStatus, 'Сравниваем методы', 'busy');
+  queryProgress.hidden = false;
+  try {
+    const response = await fetch('/compare', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: question, document_only: true, source: currentDocument}),
+    });
+    showComparison(await parseResponse(response));
+    status(queryStatus, '');
+  } catch (error) {
+    status(queryStatus, error.message, 'error');
+  } finally {
+    queryProgress.hidden = true;
+    setBusy(false);
+  }
+}
+
 $('sample-button').addEventListener('click', useExample);
+$('long-sample-button').addEventListener('click', useLongExample);
 $('file-input').addEventListener('change', (event) => uploadFile(event.target.files[0]));
 $('change-document').addEventListener('click', () => {
   currentDocument = '';
   loaded.hidden = true;
   picker.hidden = false;
   answerPanel.hidden = true;
+  comparison.hidden = true;
   queryProgress.hidden = true;
   uploadProgress.hidden = true;
   $('suggestions').hidden = true;
+  $('long-suggestions').hidden = true;
   $('file-input').value = '';
   questionInput.value = '';
   setBusy(false);
   status(queryStatus, '');
 });
 $('question-form').addEventListener('submit', ask);
+$('compare-button').addEventListener('click', compareMethods);
 document.querySelectorAll('[data-question]').forEach((button) => button.addEventListener('click', () => {
   questionInput.value = button.dataset.question;
   questionInput.focus();

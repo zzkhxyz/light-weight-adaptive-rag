@@ -4,7 +4,7 @@ import asyncio
 import time
 
 from .config import Settings
-from .models import Chunk, QueryResult, Route
+from .models import Chunk, GuardVerdict, QueryResult, Route
 from .router import asks_for_overview, route_query
 from .store import rrf
 
@@ -17,8 +17,23 @@ class Engine:
         self.settings = settings
         self.web = web
 
+    async def baseline_query(self, question: str, source: str) -> QueryResult:
+        """Plain dense top-k RAG: one retrieval and one generation, without verification."""
+        started = time.perf_counter()
+        if hasattr(self.llm, "reset_usage"):
+            self.llm.reset_usage()
+        chunks = await self.store.search_dense(question, self.settings.final_limit, source=source)
+        if not chunks:
+            return self._result("Выбранный документ не найден. Загрузите его снова.", [], 0.0,
+                                Route.STANDARD_RAG, [], ["baseline:dense", "baseline:empty"], 0, started)
+        response = self._restrict_citations(await self.llm.answer(question, chunks), chunks)
+        return self._result(response.answer, response.citations, response.confidence_score,
+                            Route.STANDARD_RAG, chunks, ["baseline:dense", "baseline:unverified"], 1, started)
+
     async def query(self, question: str, forced_route: Route | None = None, document_only: bool = False, source: str | None = None) -> QueryResult:
         started = time.perf_counter()
+        if hasattr(self.llm, "reset_usage"):
+            self.llm.reset_usage()
         route = forced_route or route_query(question)
         if document_only and route == Route.DIRECT:
             route = Route.STANDARD_RAG
@@ -56,7 +71,14 @@ class Engine:
             trace.append(f"rerank:{len(selected)}")
         if document_only and source:
             # For a chosen document, reranking orders passages; the guard decides whether they support an answer.
-            selected = selected[:12 if overview else self.settings.final_limit]
+            if overview:
+                selected = selected[:12]
+            else:
+                # Keep retrieval leaders as well: the default cross encoder is English trained
+                # and may demote a decisive passage in Russian or a cross-language query.
+                selected = list({chunk.id: chunk for chunk in
+                                 [*selected[:self.settings.final_limit], *candidates[:self.settings.final_limit]]}.values())
+                trace.append("context:rerank_and_retrieval")
             trace.append("crag:document_scope")
         elif not selected or selected[0].score < self.settings.rerank_threshold:
             trace.append("crag:low_confidence")
@@ -90,15 +112,17 @@ class Engine:
         response = await self.llm.answer(question, selected)
         calls += 1
         response = self._restrict_citations(response, selected)
-        verdict = await self.llm.guard(question, response.answer, selected)
-        calls += 1
+        cited_context = [chunk for chunk in selected if chunk.id in response.citations]
+        verdict = await self.llm.guard(question, response.answer, cited_context) if cited_context else GuardVerdict(supported=False, unsupported_claims=["no citations"])
+        calls += int(bool(cited_context))
         trace.append("guard:pass" if verdict.supported else "guard:fail")
         if not verdict.supported:
             response = await self.llm.answer(question, selected, strict=True)
             calls += 1
             response = self._restrict_citations(response, selected)
-            verdict = await self.llm.guard(question, response.answer, selected)
-            calls += 1
+            cited_context = [chunk for chunk in selected if chunk.id in response.citations]
+            verdict = await self.llm.guard(question, response.answer, cited_context) if cited_context else GuardVerdict(supported=False, unsupported_claims=["no citations"])
+            calls += int(bool(cited_context))
             trace.append("guard:retry_pass" if verdict.supported else "guard:retry_fail")
         if not verdict.supported or not response.citations:
             text = "Не удалось подтвердить ответ по источникам." if any("а" <= c.lower() <= "я" for c in question) else "The answer could not be verified against the sources."
@@ -116,12 +140,13 @@ class Engine:
         valid = {c.id for c in chunks}
         return response.model_copy(update={"citations": list(dict.fromkeys(c for c in response.citations if c in valid))})
 
-    @staticmethod
-    def _result(answer, citations, confidence, route, sources, trace, calls, started) -> QueryResult:
+    def _result(self, answer, citations, confidence, route, sources, trace, calls, started) -> QueryResult:
         cited = set(citations)
+        usage = self.llm.usage() if hasattr(self.llm, "usage") else None
         return QueryResult(
             answer=answer, citations=citations, confidence_score=confidence,
             reasoning_trace=trace, route=route,
             sources=[c for c in sources if c.id in cited],
             latency_ms=round((time.perf_counter() - started) * 1000, 2), llm_calls=calls,
+            input_tokens=usage[0] if usage else None, output_tokens=usage[1] if usage else None,
         )
