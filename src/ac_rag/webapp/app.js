@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 const picker = $('document-picker');
 const loaded = $('loaded-document');
 const uploadStatus = $('upload-status');
+const uploadProgress = $('upload-progress');
 const queryStatus = $('query-status');
 const queryProgress = $('query-progress');
 const answerPanel = $('answer-panel');
@@ -47,7 +48,8 @@ function documentReady(name, isExample) {
 async function useExample() {
   if (busy) return;
   setBusy(true);
-  status(uploadStatus, 'Загружаем пример, при первом запуске это может занять минуту', 'busy');
+  status(uploadStatus, 'Подготавливаем пример, при первом запуске это может занять минуту', 'busy');
+  uploadProgress.hidden = false;
   try {
     const response = await fetch('/example/load', {method: 'POST'});
     const data = await parseResponse(response);
@@ -56,6 +58,8 @@ async function useExample() {
   } catch (error) {
     status(uploadStatus, error.message, 'error');
     setBusy(false);
+  } finally {
+    uploadProgress.hidden = true;
   }
 }
 
@@ -70,7 +74,8 @@ async function uploadFile(file) {
     return;
   }
   setBusy(true);
-  status(uploadStatus, 'Загружаем файл, при первом запуске это может занять минуту', 'busy');
+  status(uploadStatus, 'Загружаем и обрабатываем файл, при первом запуске это может занять минуту', 'busy');
+  uploadProgress.hidden = false;
   const form = new FormData();
   form.append('file', file);
   try {
@@ -81,6 +86,8 @@ async function uploadFile(file) {
   } catch (error) {
     status(uploadStatus, error.message, 'error');
     setBusy(false);
+  } finally {
+    uploadProgress.hidden = true;
   }
 }
 
@@ -129,6 +136,7 @@ $('change-document').addEventListener('click', () => {
   picker.hidden = false;
   answerPanel.hidden = true;
   queryProgress.hidden = true;
+  uploadProgress.hidden = true;
   $('suggestions').hidden = true;
   $('file-input').value = '';
   questionInput.value = '';
