@@ -30,3 +30,15 @@ def test_local_store_round_trip_and_source_replacement(tmp_path):
         finally:
             reopened.close()
     asyncio.run(run())
+
+
+def test_source_search_works_when_question_language_differs(tmp_path):
+    async def run():
+        store = HybridStore(tmp_path / "qdrant", FakeVectors())
+        try:
+            await store.ingest("english-report", "This report describes KPI monitoring and support programs.")
+            matches = await store.search("О чем документ?", source="english-report")
+            assert [row.source for row in matches] == ["english-report"]
+        finally:
+            store.close()
+    asyncio.run(run())

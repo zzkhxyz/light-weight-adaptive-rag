@@ -99,23 +99,39 @@ class HybridStore:
         return [row.id for rows in grouped.values() for row in rows]
 
     async def search(self, query: str, limit: int = 20, vector_query: str | None = None, source: str | None = None) -> list[Chunk]:
-        lang = language_of(query)
+        query_lang = language_of(query)
         async with self._lock:
-            if not self._chunks[lang]:
-                return []
-            vector = (await self.models.embed([vector_query or query], lang))[0]
-            name = f"chunks_{lang}"
-            source_filter = models.Filter(must=[models.FieldCondition(key="source", match=models.MatchValue(value=source))]) if source else None
-            result = await asyncio.to_thread(self.client.query_points, name, query=vector, query_filter=source_filter, limit=limit, with_payload=True)
-            dense = [Chunk(id=int(r.id), score=float(r.score), **r.payload) for r in result.points]
-            bm = self._bm25[lang]
-            tokens = tokenize(query)
-            sparse = []
-            if bm and tokens:
-                scores = bm.get_scores(tokens)
-                order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-                sparse = [self._chunks[lang][i].model_copy(update={"score": float(scores[i])}) for i in order if scores[i] > 0 and (source is None or self._chunks[lang][i].source == source)][:limit]
-            return rrf([dense, sparse])[:limit]
+            languages = [query_lang] if source is None else [lang for lang in (query_lang, "ru" if query_lang == "en" else "en") if any(row.source == source for row in self._chunks[lang])]
+            rankings = []
+            for lang in languages:
+                if not self._chunks[lang]:
+                    continue
+                vector = (await self.models.embed([vector_query or query], lang))[0]
+                name = f"chunks_{lang}"
+                source_filter = models.Filter(must=[models.FieldCondition(key="source", match=models.MatchValue(value=source))]) if source else None
+                result = await asyncio.to_thread(self.client.query_points, name, query=vector, query_filter=source_filter, limit=limit, with_payload=True)
+                dense = [Chunk(id=int(r.id), score=float(r.score), **r.payload) for r in result.points]
+                bm = self._bm25[lang]
+                tokens = tokenize(query)
+                sparse = []
+                if bm and tokens:
+                    scores = bm.get_scores(tokens)
+                    order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+                    sparse = [self._chunks[lang][i].model_copy(update={"score": float(scores[i])}) for i in order if scores[i] > 0 and (source is None or self._chunks[lang][i].source == source)][:limit]
+                rankings.append(rrf([dense, sparse])[:limit])
+            return (rankings[0] if len(rankings) == 1 else rrf(rankings))[:limit]
+
+    async def source_chunks(self, source: str, limit: int = 12, max_chars: int = 18000) -> list[Chunk]:
+        async with self._lock:
+            rows = [row for lang in ("en", "ru") for row in self._chunks[lang] if row.source == source]
+            chosen = []
+            total = 0
+            for row in rows:
+                if len(chosen) >= limit or total + len(row.text) > max_chars:
+                    break
+                chosen.append(row)
+                total += len(row.text)
+            return chosen
 
     async def search_dense(self, query: str, limit: int = 5) -> list[Chunk]:
         lang = language_of(query)

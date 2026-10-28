@@ -23,3 +23,13 @@ def route_query(query: str) -> Route:
 
 def tokenize(text: str) -> list[str]:
     return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
+
+
+def asks_for_overview(query: str) -> bool:
+    q = query.strip().lower()
+    return bool(re.search(
+        r"о ч[её]м (?:этот |данный )?документ|"
+        r"(?:кратко )?(?:перескажи|суммируй) (?:этот )?документ|"
+        r"what is (?:this|the) document about|summari[sz]e (?:this|the) document",
+        q,
+    ))

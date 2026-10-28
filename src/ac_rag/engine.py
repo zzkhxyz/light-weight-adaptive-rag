@@ -5,7 +5,7 @@ import time
 
 from .config import Settings
 from .models import Chunk, QueryResult, Route
-from .router import route_query
+from .router import asks_for_overview, route_query
 from .store import rrf
 
 
@@ -33,7 +33,11 @@ class Engine:
             calls += 1
             return self._result(response.answer, [], response.confidence_score, route, [], trace + ["direct:llm"], calls, started)
 
-        if route == Route.HYDE:
+        overview = bool(document_only and source and asks_for_overview(question))
+        if overview:
+            candidates = await self.store.source_chunks(source)
+            trace.append("retrieval:document_overview")
+        elif route == Route.HYDE:
             hypothesis = await self.llm.hyde(question)
             calls += 1
             candidates = await self.store.search(question, self.settings.retrieval_limit, vector_query=hypothesis, source=source)
@@ -47,9 +51,14 @@ class Engine:
             candidates = await self.store.search(question, self.settings.retrieval_limit, source=source)
             trace.append("retrieval:hybrid")
 
-        selected = await self._rerank(question, candidates)
-        trace.append(f"rerank:{len(selected)}")
-        if not selected or selected[0].score < self.settings.rerank_threshold:
+        selected = candidates if overview else await self._rerank(question, candidates)
+        if not overview:
+            trace.append(f"rerank:{len(selected)}")
+        if document_only and source:
+            # For a chosen document, reranking orders passages; the guard decides whether they support an answer.
+            selected = selected[:12 if overview else self.settings.final_limit]
+            trace.append("crag:document_scope")
+        elif not selected or selected[0].score < self.settings.rerank_threshold:
             trace.append("crag:low_confidence")
             for _ in range(self.settings.max_fallbacks):
                 if self.web is not None and not document_only:
@@ -69,9 +78,13 @@ class Engine:
                 if selected and selected[0].score >= self.settings.rerank_threshold:
                     break
 
-        selected = [c for c in selected if c.score >= self.settings.rerank_threshold][:self.settings.final_limit]
+        if not (document_only and source):
+            selected = [c for c in selected if c.score >= self.settings.rerank_threshold][:self.settings.final_limit]
         if not selected:
-            text = "Недостаточно релевантных данных для ответа." if any("а" <= c.lower() <= "я" for c in question) else "There is not enough relevant evidence to answer."
+            if document_only and source:
+                text = "Выбранный документ не найден. Загрузите его снова." if any("а" <= c.lower() <= "я" for c in question) else "The selected document was not found. Upload it again."
+            else:
+                text = "Недостаточно релевантных данных для ответа." if any("а" <= c.lower() <= "я" for c in question) else "There is not enough relevant evidence to answer."
             return self._result(text, [], 0.0, route, [], trace + ["crag:abstain"], calls, started)
 
         response = await self.llm.answer(question, selected)

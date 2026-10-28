@@ -62,8 +62,8 @@ For a smoke test, `GET /health` should return `status: ok` and a chunk count. In
 
 ## Design notes
 
-- Embeddings use `BAAI/bge-small-en-v1.5` for English and `cointegrated/rubert-tiny2` for Russian. Qdrant collections are separated by language because vector dimensions can differ. A query searches its detected language only.
-- The configured cross encoder is English trained. Its sigmoid score is a routing heuristic, not a calibrated probability. Tune the `0.65` threshold per corpus and language. For Russian production traffic, evaluate and configure a multilingual reranker.
+- Embeddings use `BAAI/bge-small-en-v1.5` for English and `cointegrated/rubert-tiny2` for Russian. Qdrant collections are separated by language because vector dimensions can differ. When a document is selected, search checks every language collection containing that document.
+- The configured cross encoder is English trained. Its sigmoid score is a routing heuristic, not a calibrated probability. For a selected document, it orders passages but does not block generation; the answer guard makes the final evidence check. For unscoped search, tune the `0.65` threshold per corpus and language. For Russian production traffic, evaluate and configure a multilingual reranker.
 - BM25 is rebuilt from Qdrant payloads on process startup. One process owns a local Qdrant path; use a Qdrant server and a shared sparse index for multiworker deployment.
 - Reingesting a source replaces its prior chunks. Chunk IDs are stable 63 bit hashes of source and chunk index. Source content is treated as data, never as instructions.
 - CLI ingestion accepts UTF-8 `.txt`/`.md`, text-based `.pdf`, and `.docx`. Scanned PDFs need OCR before ingestion.

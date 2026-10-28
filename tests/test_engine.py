@@ -11,10 +11,18 @@ class FakeStore:
     async def search(self, query, limit=20, vector_query=None, source=None):
         return [Chunk(id=7, text="Paris is the capital of France.", source="guide", language="en")]
 
+    async def source_chunks(self, source):
+        return [Chunk(id=7, text="Paris is the capital of France.", source=source, language="en")]
+
 
 class FakeModels:
     async def rerank(self, query, texts):
         return [0.92 for _ in texts]
+
+
+class LowScoreModels:
+    async def rerank(self, query, texts):
+        return [0.05 for _ in texts]
 
 
 class FakeLLM:
@@ -49,6 +57,25 @@ def test_failed_guard_abstains_after_retry():
     assert result.citations == []
     assert result.confidence_score == 0
     assert result.llm_calls == 4
+
+
+def test_selected_document_reaches_guard_despite_low_reranker_score():
+    async def run():
+        engine = Engine(FakeStore(), LowScoreModels(), FakeLLM(), Settings(max_fallbacks=0))
+        return await engine.query("Что написано в документе?", Route.STANDARD_RAG, document_only=True, source="guide")
+    result = asyncio.run(run())
+    assert "Недостаточно релевантных данных" not in result.answer
+    assert result.citations == [7]
+    assert "guard:pass" in result.reasoning_trace
+
+
+def test_document_overview_uses_source_without_reranking():
+    async def run():
+        engine = Engine(FakeStore(), LowScoreModels(), FakeLLM(), Settings(max_fallbacks=0))
+        return await engine.query("О чем документ?", document_only=True, source="guide")
+    result = asyncio.run(run())
+    assert result.citations == [7]
+    assert "retrieval:document_overview" in result.reasoning_trace
 
 
 def test_rrf_rewards_overlap():
